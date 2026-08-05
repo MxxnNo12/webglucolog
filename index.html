@@ -70,7 +70,8 @@
 </header>
 
 <nav class="tabs" id="tabs">
-  <button class="tab active" data-tab="log">น้ำตาล</button>
+  <button class="tab active" data-tab="dashboard">แดชบอร์ด</button>
+  <button class="tab" data-tab="log">น้ำตาล</button>
   <button class="tab" data-tab="food">อาหาร/บาร์โค้ด</button>
   <button class="tab" data-tab="exercise">ออกกำลังกาย</button>
   <button class="tab" data-tab="stats">สถิติ</button>
@@ -80,8 +81,52 @@
 
 <main>
 
+  <!-- TAB: แดชบอร์ด -->
+  <section class="panel active" id="panel-dashboard">
+    <div class="card admin-only" id="dashboardUserPicker" style="display:none;">
+      <h2>ดูข้อมูลของ</h2>
+      <select id="dashboardUserSelect">
+        <option value="">กำลังโหลดรายชื่อ…</option>
+      </select>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <span class="stat-label">ค่าน้ำตาลล่าสุด</span>
+        <span class="stat-value" id="dashLatestSugar">–</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">ค่าเฉลี่ย (7 วัน)</span>
+        <span class="stat-value" id="dashAvgSugar">–</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">น้ำตาลจากอาหารวันนี้</span>
+        <span class="stat-value" id="dashFoodToday">–</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">ออกกำลังกาย (7 วัน)</span>
+        <span class="stat-value" id="dashExCount">–</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>เทียบน้ำตาลวันนี้กับเกณฑ์ WHO</h2>
+      <div id="dashWhoCompare"></div>
+    </div>
+
+    <div class="card">
+      <h2>ค่าน้ำตาลย้อนหลัง</h2>
+      <canvas id="dashSugarChart" height="200"></canvas>
+    </div>
+
+    <div class="card">
+      <h2>รายการล่าสุด</h2>
+      <div id="dashRecent"></div>
+    </div>
+  </section>
+
   <!-- TAB: บันทึกน้ำตาล -->
-  <section class="panel active" id="panel-log">
+  <section class="panel" id="panel-log">
     <div class="card form-card">
       <h2>บันทึกค่าน้ำตาลในเลือด</h2>
       <form id="sugarForm" class="grid-form">
@@ -299,9 +344,9 @@
         <button type="submit" class="btn-primary full">บันทึกโปรไฟล์</button>
       </form>
     </div>
-    <div class="card">
+    <div class="card admin-only" style="display:none;">
       <h2>เชื่อมต่อ Google Sheet (ฐานข้อมูล)</h2>
-      <p class="hint-block">Web App URL ปัจจุบัน (แก้ไขได้หากต้องเปลี่ยน)</p>
+      <p class="hint-block">Web App URL ปัจจุบัน (แก้ไขได้หากต้องเปลี่ยน) — มองเห็นเฉพาะแอดมิน</p>
       <div class="row-input">
         <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/xxxxx/exec">
         <button class="btn-secondary" id="saveUrlBtn">บันทึก URL</button>
@@ -312,7 +357,7 @@
       <p class="hint-block">ข้อมูลทั้งหมด sync ไปที่ Google Sheet อัตโนมัติอยู่แล้ว (เท่ากับ backup ในตัว) กดปุ่มด้านล่างเพื่อโหลดเป็นไฟล์ Excel เก็บไว้เครื่องคุณเพิ่มเติมได้</p>
       <div class="btn-row">
         <button class="btn-primary" id="exportExcelBtn">📊 Export เป็น Excel (.xlsx)</button>
-        <button class="btn-secondary" id="openSheetBtn">📗 เปิด Google Sheet</button>
+        <button class="btn-secondary admin-only" id="openSheetBtn" style="display:none;">📗 เปิด Google Sheet</button>
       </div>
     </div>
   </section>
