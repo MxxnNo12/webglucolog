@@ -1,5 +1,9 @@
 // ====== CONFIG / SESSION ======
-let SCRIPT_URL = localStorage.getItem('glucolog_script_url') || '';
+// 👉 วาง Google Apps Script Web App URL ของคุณตรงนี้ (ระหว่างเครื่องหมายคำพูด)
+// เมื่อใส่แล้ว ทุกเครื่อง/ทุกเบราว์เซอร์ที่เปิดเว็บนี้จะเชื่อมต่อ Google Sheet ให้อัตโนมัติ ไม่ต้องกรอก URL เอง
+const DEFAULT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzQzv51b1ffyZkTCFIpyNPFqI63byX1uuEiGETIdYRa2-Xcu5xhukvT4hLamCCMxfvXhw/exec";
+
+let SCRIPT_URL = localStorage.getItem('glucolog_script_url') || DEFAULT_SCRIPT_URL;
 let currentUser = JSON.parse(localStorage.getItem('glucolog_user') || 'null');
 let html5QrCode = null;
 let pendingProduct = null; // ผลิตภัณฑ์ที่กำลังจะบันทึกการกิน
@@ -65,6 +69,10 @@ document.querySelectorAll('.auth-tab').forEach(btn=>{
 });
 
 document.getElementById('authScriptUrl').value = SCRIPT_URL;
+if(DEFAULT_SCRIPT_URL){
+  // มี URL ฝังในโค้ดแล้ว ไม่ต้องให้ผู้ใช้กรอกเอง ซ่อนช่องนี้ไว้
+  document.getElementById('authScriptUrl').closest('.row-input').style.display = 'none';
+}
 document.getElementById('authSaveUrlBtn').addEventListener('click', ()=>{
   const url = document.getElementById('authScriptUrl').value.trim();
   if(!url){ toast('กรุณากรอก URL', true); return; }
