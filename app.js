@@ -1,7 +1,7 @@
 // ====== CONFIG / SESSION ======
 // 👉 วาง Google Apps Script Web App URL ของคุณตรงนี้ (ระหว่างเครื่องหมายคำพูด)
 // เมื่อใส่แล้ว ทุกเครื่อง/ทุกเบราว์เซอร์ที่เปิดเว็บนี้จะเชื่อมต่อ Google Sheet ให้อัตโนมัติ ไม่ต้องกรอก URL เอง
-const DEFAULT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzQzv51b1ffyZkTCFIpyNPFqI63byX1uuEiGETIdYRa2-Xcu5xhukvT4hLamCCMxfvXhw/exec";
+const DEFAULT_SCRIPT_URL = "";
 
 let SCRIPT_URL = localStorage.getItem('glucolog_script_url') || DEFAULT_SCRIPT_URL;
 let currentUser = JSON.parse(localStorage.getItem('glucolog_user') || 'null');
@@ -15,8 +15,9 @@ const WHO_MAX_G = 50;     // <10% ของพลังงาน = เพดา�
 // ====== UTIL ======
 function toast(msg, isError=false){
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.style.background = isError ? '#BE4B39' : '#1E2B29';
+  t.textContent = isError ? ('⚠ ' + msg) : msg;
+  t.style.background = '#111111';
+  t.style.border = isError ? '2px solid #FFFFFF' : 'none';
   t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'), 2600);
 }
@@ -176,7 +177,7 @@ function renderSugarTable(){
   const tbody = document.querySelector('#sugarTable tbody');
   tbody.innerHTML = '';
   sugarData.slice().reverse().slice(0,50).forEach(row=>{
-    const alertStyle = row.value > 180 || row.value < 70 ? ' style="color:#BE4B39;font-weight:700;"' : '';
+    const alertStyle = row.value > 180 || row.value < 70 ? ' style="color:#111111;font-weight:700;"' : '';
     tbody.innerHTML += `<tr>
       <td>${fmtDate(row.date)}</td>
       <td${alertStyle}>${row.value}</td>
@@ -506,8 +507,8 @@ function renderStats(){
   document.getElementById('statFoodSugar').textContent = totalFoodSugar ? totalFoodSugar.toFixed(1)+' g' : '–';
   document.getElementById('statExCount').textContent = recentEx.length;
 
-  drawLineChart('sugarChart', recentSugar.map(r=>({x:r.date, y:Number(r.value)})), '#DE9F2E', 'mg/dL');
-  drawBarChart('calChart', recentEx.map(r=>({x:r.date, y:Number(r.calories)})), '#2E6B5E', 'kcal');
+  drawLineChart('sugarChart', recentSugar.map(r=>({x:r.date, y:Number(r.value)})), '#111111', 'mg/dL');
+  drawBarChart('calChart', recentEx.map(r=>({x:r.date, y:Number(r.calories)})), '#555555', 'kcal');
 }
 
 function drawLineChart(canvasId, points, color, unit){
@@ -516,7 +517,7 @@ function drawLineChart(canvasId, points, color, unit){
   canvas.width = canvas.clientWidth; canvas.height = 220;
   ctx.clearRect(0,0,canvas.width,canvas.height);
   if(points.length < 2){
-    ctx.fillStyle = '#6C7A73'; ctx.font='13px Inter';
+    ctx.fillStyle = '#6E6E6E'; ctx.font='13px Inter';
     ctx.fillText('ยังไม่มีข้อมูลเพียงพอสำหรับแสดงกราฟ', 12, 110);
     return;
   }
@@ -537,7 +538,7 @@ function drawLineChart(canvasId, points, color, unit){
     const y = pad + h - ((p.y-minY)/(maxY-minY))*h;
     ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x,y,3,0,7); ctx.fill();
   });
-  ctx.fillStyle = '#6C7A73'; ctx.font = '11px JetBrains Mono';
+  ctx.fillStyle = '#6E6E6E'; ctx.font = '11px JetBrains Mono';
   ctx.fillText(maxY.toFixed(0)+' '+unit, 2, pad);
   ctx.fillText(minY.toFixed(0)+' '+unit, 2, pad+h);
 }
@@ -548,7 +549,7 @@ function drawBarChart(canvasId, points, color, unit){
   canvas.width = canvas.clientWidth; canvas.height = 220;
   ctx.clearRect(0,0,canvas.width,canvas.height);
   if(points.length < 1){
-    ctx.fillStyle = '#6C7A73'; ctx.font='13px Inter';
+    ctx.fillStyle = '#6E6E6E'; ctx.font='13px Inter';
     ctx.fillText('ยังไม่มีข้อมูลเพียงพอสำหรับแสดงกราฟ', 12, 110);
     return;
   }
@@ -562,7 +563,7 @@ function drawBarChart(canvasId, points, color, unit){
     ctx.fillStyle = color;
     ctx.fillRect(x, pad+h-barH, barW, barH);
   });
-  ctx.fillStyle = '#6C7A73'; ctx.font = '11px JetBrains Mono';
+  ctx.fillStyle = '#6E6E6E'; ctx.font = '11px JetBrains Mono';
   ctx.fillText(maxY.toFixed(0)+' '+unit, 2, pad);
 }
 
@@ -670,7 +671,7 @@ function renderDashboard(sugarArr, exerciseArr, foodArr, weight, userType){
   document.getElementById('dashFoodToday').textContent = foodTodaySum ? foodTodaySum.toFixed(1)+' g' : '–';
   document.getElementById('dashExCount').textContent = recentEx.length;
 
-  drawLineChart('dashSugarChart', recentSugar.map(r=>({x:r.date, y:Number(r.value)})), '#DE9F2E', 'mg/dL');
+  drawLineChart('dashSugarChart', recentSugar.map(r=>({x:r.date, y:Number(r.value)})), '#111111', 'mg/dL');
   renderWhoCompareGeneric(foodArr, userType, weight, 'dashWhoCompare');
 
   const merged = [
