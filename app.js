@@ -1,7 +1,7 @@
 // ====== CONFIG / SESSION ======
 // 👉 วาง Google Apps Script Web App URL ของคุณตรงนี้ (ระหว่างเครื่องหมายคำพูด)
 // เมื่อใส่แล้ว ทุกเครื่อง/ทุกเบราว์เซอร์ที่เปิดเว็บนี้จะเชื่อมต่อ Google Sheet ให้อัตโนมัติ ไม่ต้องกรอก URL เอง
-const DEFAULT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzQzv51b1ffyZkTCFIpyNPFqI63byX1uuEiGETIdYRa2-Xcu5xhukvT4hLamCCMxfvXhw/exec";
+const DEFAULT_SCRIPT_URL = "";
 
 let SCRIPT_URL = localStorage.getItem('glucolog_script_url') || DEFAULT_SCRIPT_URL;
 let currentUser = JSON.parse(localStorage.getItem('glucolog_user') || 'null');
@@ -132,7 +132,7 @@ function showApp(){
   document.getElementById('profileWeight').value = currentUser.weight || '';
   document.getElementById('profileUserType').value = currentUser.userType || 'ทั่วไป';
   document.getElementById('scriptUrl').value = SCRIPT_URL;
-  loadAll();
+  loadAll().then(()=> openDashboardTab());
 }
 
 // ====== TABS ======
@@ -145,6 +145,7 @@ document.getElementById('tabs').addEventListener('click', (e)=>{
   document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
   if(btn.dataset.tab === 'stats') renderStats();
   if(btn.dataset.tab === 'admin') loadAdmin();
+  if(btn.dataset.tab === 'dashboard') openDashboardTab();
 });
 
 // ====== SUGAR ======
@@ -188,7 +189,7 @@ function renderSugarTable(){
 
 async function loadSugarData(){
   try{
-    const res = await apiCall('listSugar', 'GET', null, { userId: currentUser.id });
+    const res = await apiCall('listSugar', 'GET', null, { userId: currentUser.id, requesterId: currentUser.id });
     sugarData = res.data || [];
     renderSugarTable();
   }catch(err){ console.error(err); }
@@ -303,7 +304,7 @@ function renderExTable(){
 
 async function loadExerciseData(){
   try{
-    const res = await apiCall('listExercise', 'GET', null, { userId: currentUser.id });
+    const res = await apiCall('listExercise', 'GET', null, { userId: currentUser.id, requesterId: currentUser.id });
     exerciseData = res.data || [];
     renderExTable();
   }catch(err){ console.error(err); }
@@ -448,17 +449,23 @@ function renderFoodTable(){
 }
 
 function renderWhoCompare(){
-  const today = foodData.filter(r=>isToday(r.date));
+  renderWhoCompareGeneric(foodData, currentUser.userType, currentUser.weight, 'whoCompare');
+}
+
+function renderWhoCompareGeneric(foodArr, userType, weight, containerId){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  const today = foodArr.filter(r=>isToday(r.date));
   const totalSugar = today.reduce((s,r)=>s+Number(r.sugarConsumed||0), 0);
-  const isDiabetic = currentUser.userType === 'เบาหวาน';
+  const isDiabetic = userType === 'เบาหวาน';
   const target = WHO_IDEAL_G; // ใช้เกณฑ์เข้มงวด (5%) เป็นเป้าหมายอ้างอิงสำหรับทั้งสองกลุ่ม
   const pct = Math.min(100, (totalSugar/target)*100);
   const over = totalSugar > target;
   const excess = Math.max(0, totalSugar - target);
-  const weight = currentUser.weight || 65;
-  const walkMin = excess ? ((excess*4)/(4.3*weight/60)).toFixed(0) : 0;
+  const w = weight || 65;
+  const walkMin = excess ? ((excess*4)/(4.3*w/60)).toFixed(0) : 0;
 
-  document.getElementById('whoCompare').innerHTML = `
+  el.innerHTML = `
     <div class="who-row">
       <span>วันนี้กินน้ำตาลไปแล้ว</span>
       <span><b>${totalSugar.toFixed(1)} g</b> / เป้าหมาย ${target} g</span>
@@ -477,7 +484,7 @@ function renderWhoCompare(){
 
 async function loadFoodData(){
   try{
-    const res = await apiCall('listFoodLog', 'GET', null, { userId: currentUser.id });
+    const res = await apiCall('listFoodLog', 'GET', null, { userId: currentUser.id, requesterId: currentUser.id });
     foodData = res.data || [];
     renderFoodTable();
   }catch(err){ console.error(err); }
@@ -595,6 +602,86 @@ async function toggleRole(userId, currentRole){
     toast('อัปเดตสิทธิ์แล้ว');
     loadAdmin();
   }catch(err){ console.error(err); }
+}
+
+// ====== DASHBOARD ======
+let dashboardUsersCache = null; // {id: {displayName, weight, userType, username}}
+let dashboardTargetId = null;
+
+async function openDashboardTab(){
+  if(currentUser.role === 'admin'){
+    document.getElementById('dashboardUserPicker').style.display = '';
+    if(!dashboardUsersCache) await loadDashboardUserList();
+  }
+  loadDashboard(dashboardTargetId || currentUser.id);
+}
+
+async function loadDashboardUserList(){
+  try{
+    const res = await apiCall('listUsers', 'GET', null, { requesterId: currentUser.id });
+    const users = res.data || [];
+    dashboardUsersCache = {};
+    users.forEach(u=> dashboardUsersCache[u.id] = u);
+    const select = document.getElementById('dashboardUserSelect');
+    select.innerHTML = users.map(u=>
+      `<option value="${u.id}" ${u.id===currentUser.id?'selected':''}>${u.displayName}${u.id===currentUser.id?' (ฉัน)':''}</option>`
+    ).join('');
+  }catch(err){ console.error(err); }
+}
+
+document.getElementById('dashboardUserSelect').addEventListener('change', (e)=>{
+  dashboardTargetId = e.target.value;
+  loadDashboard(dashboardTargetId);
+});
+
+async function loadDashboard(targetUserId){
+  let sugarArr, exerciseArr, foodArr, weight, userType;
+  if(targetUserId === currentUser.id){
+    sugarArr = sugarData; exerciseArr = exerciseData; foodArr = foodData;
+    weight = currentUser.weight; userType = currentUser.userType;
+  } else {
+    try{
+      const [s, ex, fd] = await Promise.all([
+        apiCall('listSugar', 'GET', null, { userId: targetUserId, requesterId: currentUser.id }),
+        apiCall('listExercise', 'GET', null, { userId: targetUserId, requesterId: currentUser.id }),
+        apiCall('listFoodLog', 'GET', null, { userId: targetUserId, requesterId: currentUser.id })
+      ]);
+      sugarArr = s.data || []; exerciseArr = ex.data || []; foodArr = fd.data || [];
+      const u = dashboardUsersCache ? dashboardUsersCache[targetUserId] : null;
+      weight = u ? u.weight : 65; userType = u ? u.userType : 'ทั่วไป';
+    }catch(err){ console.error(err); return; }
+  }
+  renderDashboard(sugarArr, exerciseArr, foodArr, weight, userType);
+}
+
+function renderDashboard(sugarArr, exerciseArr, foodArr, weight, userType){
+  const sevenDaysAgo = Date.now() - 7*24*60*60*1000;
+  const recentSugar = sugarArr.filter(r=> new Date(r.date).getTime() >= sevenDaysAgo);
+  const recentEx = exerciseArr.filter(r=> new Date(r.date).getTime() >= sevenDaysAgo);
+  const todayFood = foodArr.filter(r=> isToday(r.date));
+
+  const sorted = sugarArr.slice().sort((a,b)=> new Date(b.date)-new Date(a.date));
+  const latest = sorted[0];
+  const avgSugar = recentSugar.length ? (recentSugar.reduce((s,r)=>s+Number(r.value),0)/recentSugar.length) : 0;
+  const foodTodaySum = todayFood.reduce((s,r)=>s+Number(r.sugarConsumed||0),0);
+
+  document.getElementById('dashLatestSugar').textContent = latest ? `${latest.value} mg/dL` : '–';
+  document.getElementById('dashAvgSugar').textContent = avgSugar ? avgSugar.toFixed(0)+' mg/dL' : '–';
+  document.getElementById('dashFoodToday').textContent = foodTodaySum ? foodTodaySum.toFixed(1)+' g' : '–';
+  document.getElementById('dashExCount').textContent = recentEx.length;
+
+  drawLineChart('dashSugarChart', recentSugar.map(r=>({x:r.date, y:Number(r.value)})), '#DE9F2E', 'mg/dL');
+  renderWhoCompareGeneric(foodArr, userType, weight, 'dashWhoCompare');
+
+  const merged = [
+    ...sugarArr.map(r=>({date:r.date, label:`น้ำตาล ${r.value} mg/dL · ${r.context||''}`})),
+    ...exerciseArr.map(r=>({date:r.date, label:`ออกกำลังกาย ${r.type} ${r.duration} นาที`})),
+    ...foodArr.map(r=>({date:r.date, label:`กิน ${r.productName} · น้ำตาล ${r.sugarConsumed} g`}))
+  ].sort((a,b)=> new Date(b.date)-new Date(a.date)).slice(0,6);
+
+  document.getElementById('dashRecent').innerHTML = merged.length
+    ? merged.map(m=>`<div class="who-row"><span>${fmtDate(m.date)}</span><span class="text-cell">${m.label}</span></div>`).join('')
+    : '<p class="hint">ยังไม่มีข้อมูล</p>';
 }
 
 // ====== SETTINGS / PROFILE ======
