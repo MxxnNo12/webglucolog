@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GlucoLog · บันทึกน้ำตาลและการออกกำลังกาย</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============ AUTH SCREEN ============ -->
+<div id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <div class="brand center">
+      <span class="brand-mark">＋</span>
+      <div>
+        <h1>GlucoLog</h1>
+        <p class="tagline">เฝ้าดูเส้นทางน้ำตาลของคุณ ทุกมื้อ ทุกก้าว</p>
+      </div>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-authtab="login">เข้าสู่ระบบ</button>
+      <button class="auth-tab" data-authtab="register">สมัครสมาชิก</button>
+    </div>
+
+    <form id="loginForm" class="auth-form active">
+      <label>ชื่อผู้ใช้ <input type="text" id="loginUsername" required autocomplete="username"></label>
+      <label>รหัสผ่าน <input type="password" id="loginPassword" required autocomplete="current-password"></label>
+      <button type="submit" class="btn-primary full">เข้าสู่ระบบ</button>
+    </form>
+
+    <form id="registerForm" class="auth-form">
+      <label>ชื่อผู้ใช้ <input type="text" id="regUsername" required></label>
+      <label>รหัสผ่าน <input type="password" id="regPassword" required minlength="4"></label>
+      <label>ชื่อที่แสดง <input type="text" id="regDisplayName" placeholder="เช่น คุณเอ"></label>
+      <label>น้ำหนักตัว (กก.) <input type="number" id="regWeight" min="20" max="250" required placeholder="เช่น 65"></label>
+      <label>ประเภทผู้ใช้
+        <select id="regUserType">
+          <option value="ทั่วไป">คนทั่วไป</option>
+          <option value="เบาหวาน">ผู้ป่วยเบาหวาน</option>
+        </select>
+      </label>
+      <button type="submit" class="btn-primary full">สมัครสมาชิก</button>
+      <p class="hint" style="text-align:center;margin-top:6px;">*ผู้สมัครคนแรกของระบบจะได้สิทธิ์แอดมินอัตโนมัติ</p>
+    </form>
+
+    <div class="row-input" style="margin-top:14px;">
+      <input type="text" id="authScriptUrl" placeholder="วาง Google Apps Script URL ที่นี่ก่อนใช้งาน">
+      <button class="btn-secondary" id="authSaveUrlBtn">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP SCREEN ============ -->
+<div id="appScreen" class="app-screen">
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">＋</span>
+    <div>
+      <h1>GlucoLog</h1>
+      <p class="tagline">เฝ้าดูเส้นทางน้ำตาลของคุณ ทุกมื้อ ทุกก้าว</p>
+    </div>
+  </div>
+  <div class="user-box">
+    <span id="userChip" class="status-pill">–</span>
+    <button class="btn-link" id="logoutBtn">ออกจากระบบ</button>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="tab active" data-tab="log">น้ำตาล</button>
+  <button class="tab" data-tab="food">อาหาร/บาร์โค้ด</button>
+  <button class="tab" data-tab="exercise">ออกกำลังกาย</button>
+  <button class="tab" data-tab="stats">สถิติ</button>
+  <button class="tab admin-only" data-tab="admin" style="display:none;">แอดมิน</button>
+  <button class="tab" data-tab="settings">ตั้งค่า/Export</button>
+</nav>
+
+<main>
+
+  <!-- TAB: บันทึกน้ำตาล -->
+  <section class="panel active" id="panel-log">
+    <div class="card form-card">
+      <h2>บันทึกค่าน้ำตาลในเลือด</h2>
+      <form id="sugarForm" class="grid-form">
+        <label>วันที่-เวลา
+          <input type="datetime-local" id="sugarDate" required>
+        </label>
+        <label>ค่าน้ำตาล (mg/dL)
+          <input type="number" id="sugarValue" min="20" max="600" step="1" required placeholder="เช่น 110">
+        </label>
+        <label>ช่วงเวลาที่วัด
+          <select id="sugarContext">
+            <option value="ก่อนอาหาร">ก่อนอาหาร</option>
+            <option value="หลังอาหาร 2 ชม.">หลังอาหาร 2 ชม.</option>
+            <option value="ก่อนนอน">ก่อนนอน</option>
+            <option value="ตื่นนอน">ตื่นนอน (fasting)</option>
+            <option value="อื่นๆ">อื่นๆ</option>
+          </select>
+        </label>
+        <label>ประเภทผู้ใช้
+          <select id="sugarUserType">
+            <option value="ทั่วไป">คนทั่วไป</option>
+            <option value="เบาหวาน">ผู้ป่วยเบาหวาน</option>
+          </select>
+        </label>
+        <label class="full">หมายเหตุ
+          <input type="text" id="sugarNote" placeholder="เช่น กินข้าวเหนียวมะม่วง">
+        </label>
+        <button type="submit" class="btn-primary full">บันทึกค่า</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>รายการล่าสุด</h2>
+        <span class="hint">เป้าหมาย: 70–140 mg/dL</span>
+      </div>
+      <div class="table-wrap">
+        <table id="sugarTable">
+          <thead><tr><th>วันที่</th><th>ค่า</th><th>ช่วง</th><th>ประเภท</th><th>หมายเหตุ</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB: อาหาร/บาร์โค้ด -->
+  <section class="panel" id="panel-food">
+    <div class="card">
+      <h2>สแกนบาร์โค้ดสินค้า</h2>
+      <p class="hint-block">ดึงข้อมูลน้ำตาลจากฐานข้อมูล Open Food Facts อัตโนมัติ</p>
+      <div class="btn-row">
+        <button class="btn-primary" id="startScanBtn">📷 เปิดกล้องสแกนบาร์โค้ด</button>
+      </div>
+      <div id="scannerBox" style="display:none;">
+        <div id="qrReader" style="width:100%;max-width:360px;margin:14px auto;"></div>
+        <button class="btn-secondary full" id="stopScanBtn">ปิดกล้อง</button>
+      </div>
+      <div class="row-input" style="margin-top:14px;">
+        <input type="text" id="manualBarcode" placeholder="หรือกรอกเลขบาร์โค้ดเอง">
+        <button class="btn-secondary" id="lookupBarcodeBtn">ค้นหา</button>
+      </div>
+    </div>
+
+    <div class="card" id="productResultCard" style="display:none;">
+      <h2 id="productName">–</h2>
+      <p class="hint" id="productSugarInfo"></p>
+      <div class="grid-form">
+        <label>ปริมาณที่กิน (กรัม)
+          <input type="number" id="gramsConsumed" min="1" placeholder="เช่น 100">
+        </label>
+        <div class="calc-preview full" id="foodCalcPreview"></div>
+        <button class="btn-primary full" id="logFoodBtn">บันทึกการกิน</button>
+      </div>
+    </div>
+
+    <div class="card" id="notFoundCard" style="display:none;">
+      <h2>ไม่พบสินค้านี้ในฐานข้อมูล</h2>
+      <p class="hint-block">เพิ่มข้อมูลเองได้เลย ครั้งหน้าจะค้นเจอทันที (ใช้ร่วมกันได้ทุกคนในระบบ)</p>
+      <form id="addProductForm" class="grid-form">
+        <label class="full">ชื่อสินค้า <input type="text" id="newProductName" required></label>
+        <label>น้ำตาลต่อ 100 กรัม (g) <input type="number" id="newProductSugar" min="0" step="0.1" required></label>
+        <button type="submit" class="btn-primary full">บันทึกสินค้าใหม่</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>สรุปน้ำตาลวันนี้</h2>
+        <span class="hint">เทียบเกณฑ์ WHO</span>
+      </div>
+      <div id="whoCompare"></div>
+    </div>
+
+    <div class="card">
+      <h2>ประวัติการกิน</h2>
+      <div class="table-wrap">
+        <table id="foodTable">
+          <thead><tr><th>วันที่</th><th>รายการ</th><th>กรัม</th><th>น้ำตาล (g)</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB: ออกกำลังกาย -->
+  <section class="panel" id="panel-exercise">
+    <div class="card form-card">
+      <h2 id="exFormTitle">บันทึกการออกกำลังกาย</h2>
+      <form id="exerciseForm" class="grid-form">
+        <input type="hidden" id="exEditId" value="">
+        <label>วันที่-เวลา
+          <input type="datetime-local" id="exDate" required>
+        </label>
+        <label>ประเภทกิจกรรม
+          <select id="exType">
+            <option value="เดินเร็ว" data-met="4.3">เดินเร็ว</option>
+            <option value="วิ่งเหยาะ" data-met="7.0">วิ่งเหยาะ</option>
+            <option value="วิ่งเร็ว" data-met="10.0">วิ่งเร็ว</option>
+            <option value="ปั่นจักรยาน" data-met="6.8">ปั่นจักรยาน</option>
+            <option value="ว่ายน้ำ" data-met="6.0">ว่ายน้ำ</option>
+            <option value="โยคะ" data-met="2.5">โยคะ</option>
+            <option value="เวทเทรนนิ่ง" data-met="5.0">เวทเทรนนิ่ง (weight training)</option>
+            <option value="แอโรบิก" data-met="6.5">แอโรบิก</option>
+            <option value="กระโดดเชือก" data-met="11.0">กระโดดเชือก</option>
+          </select>
+        </label>
+        <label>ระยะเวลา (นาที)
+          <input type="number" id="exDuration" min="1" max="600" required placeholder="เช่น 30">
+        </label>
+        <label>น้ำหนักตัว (กก.)
+          <input type="number" id="exWeight" min="20" max="250" required placeholder="เช่น 65">
+        </label>
+        <div class="calc-preview full" id="calcPreview">กรอกข้อมูลเพื่อดูค่าประมาณการเผาผลาญ</div>
+        <div class="btn-row full">
+          <button type="submit" class="btn-primary" id="exSubmitBtn">บันทึกการออกกำลังกาย</button>
+          <button type="button" class="btn-secondary" id="exCancelEditBtn" style="display:none;">ยกเลิกแก้ไข</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>ประวัติการออกกำลังกาย</h2>
+      <div class="table-wrap">
+        <table id="exTable">
+          <thead><tr><th>วันที่</th><th>กิจกรรม</th><th>นาที</th><th>แคลอรี่</th><th>น้ำตาล (g)</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB: สถิติ -->
+  <section class="panel" id="panel-stats">
+    <div class="stat-grid">
+      <div class="stat-card">
+        <span class="stat-label">ค่าน้ำตาลเฉลี่ย (7 วัน)</span>
+        <span class="stat-value" id="statAvgSugar">–</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">แคลอรี่เผาผลาญรวม (7 วัน)</span>
+        <span class="stat-value" id="statTotalCal">–</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">น้ำตาลจากอาหาร (7 วัน)</span>
+        <span class="stat-value" id="statFoodSugar">–</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">จำนวนครั้งที่ออกกำลังกาย</span>
+        <span class="stat-value" id="statExCount">–</span>
+      </div>
+    </div>
+    <div class="card">
+      <h2>กราฟค่าน้ำตาลย้อนหลัง</h2>
+      <canvas id="sugarChart" height="220"></canvas>
+    </div>
+    <div class="card">
+      <h2>กราฟแคลอรี่เผาผลาญรายวัน</h2>
+      <canvas id="calChart" height="220"></canvas>
+    </div>
+  </section>
+
+  <!-- TAB: แอดมิน -->
+  <section class="panel" id="panel-admin">
+    <div class="card">
+      <h2>ผู้ใช้ทั้งหมด</h2>
+      <div class="table-wrap">
+        <table id="adminUserTable">
+          <thead><tr><th>ชื่อผู้ใช้</th><th>ชื่อที่แสดง</th><th>บทบาท</th><th>ประเภท</th><th>สมัครเมื่อ</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <h2>ภาพรวมทั้งระบบ (7 วัน)</h2>
+      <div class="stat-grid">
+        <div class="stat-card"><span class="stat-label">บันทึกน้ำตาลทั้งหมด</span><span class="stat-value" id="adminSugarCount">–</span></div>
+        <div class="stat-card"><span class="stat-label">บันทึกออกกำลังกายทั้งหมด</span><span class="stat-value" id="adminExCount">–</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB: ตั้งค่า / Export -->
+  <section class="panel" id="panel-settings">
+    <div class="card">
+      <h2>โปรไฟล์ของฉัน</h2>
+      <form id="profileForm" class="grid-form">
+        <label>ชื่อที่แสดง <input type="text" id="profileDisplayName"></label>
+        <label>น้ำหนักตัว (กก.) <input type="number" id="profileWeight" min="20" max="250"></label>
+        <label>ประเภทผู้ใช้
+          <select id="profileUserType">
+            <option value="ทั่วไป">คนทั่วไป</option>
+            <option value="เบาหวาน">ผู้ป่วยเบาหวาน</option>
+          </select>
+        </label>
+        <button type="submit" class="btn-primary full">บันทึกโปรไฟล์</button>
+      </form>
+    </div>
+    <div class="card">
+      <h2>เชื่อมต่อ Google Sheet (ฐานข้อมูล)</h2>
+      <p class="hint-block">Web App URL ปัจจุบัน (แก้ไขได้หากต้องเปลี่ยน)</p>
+      <div class="row-input">
+        <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/xxxxx/exec">
+        <button class="btn-secondary" id="saveUrlBtn">บันทึก URL</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Export ข้อมูล</h2>
+      <p class="hint-block">ข้อมูลทั้งหมด sync ไปที่ Google Sheet อัตโนมัติอยู่แล้ว (เท่ากับ backup ในตัว) กดปุ่มด้านล่างเพื่อโหลดเป็นไฟล์ Excel เก็บไว้เครื่องคุณเพิ่มเติมได้</p>
+      <div class="btn-row">
+        <button class="btn-primary" id="exportExcelBtn">📊 Export เป็น Excel (.xlsx)</button>
+        <button class="btn-secondary" id="openSheetBtn">📗 เปิด Google Sheet</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
