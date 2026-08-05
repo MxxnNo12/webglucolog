@@ -1,7 +1,7 @@
 // ====== CONFIG / SESSION ======
 // 👉 วาง Google Apps Script Web App URL ของคุณตรงนี้ (ระหว่างเครื่องหมายคำพูด)
 // เมื่อใส่แล้ว ทุกเครื่อง/ทุกเบราว์เซอร์ที่เปิดเว็บนี้จะเชื่อมต่อ Google Sheet ให้อัตโนมัติ ไม่ต้องกรอก URL เอง
-const DEFAULT_SCRIPT_URL = "";
+const DEFAULT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzQzv51b1ffyZkTCFIpyNPFqI63byX1uuEiGETIdYRa2-Xcu5xhukvT4hLamCCMxfvXhw/exec";
 
 let SCRIPT_URL = localStorage.getItem('glucolog_script_url') || DEFAULT_SCRIPT_URL;
 let currentUser = JSON.parse(localStorage.getItem('glucolog_user') || 'null');
